@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dozer.Core", "Dozer.Core\Dozer.Core.csproj", "{9B7BFA47-94F2-40D7-9F81-4B246B9DFFA4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dozer.Tests", "Dozer.Tests\Dozer.Tests.csproj", "{2A6C2C1E-9A53-470D-831A-982F6442C3AA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dozer.Sample", "Dozer.Sample\Dozer.Sample.csproj", "{9BE83363-13D1-4835-9B52-720DFCAF7771}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{9B7BFA47-94F2-40D7-9F81-4B246B9DFFA4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9B7BFA47-94F2-40D7-9F81-4B246B9DFFA4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9B7BFA47-94F2-40D7-9F81-4B246B9DFFA4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9B7BFA47-94F2-40D7-9F81-4B246B9DFFA4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2A6C2C1E-9A53-470D-831A-982F6442C3AA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2A6C2C1E-9A53-470D-831A-982F6442C3AA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2A6C2C1E-9A53-470D-831A-982F6442C3AA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2A6C2C1E-9A53-470D-831A-982F6442C3AA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9BE83363-13D1-4835-9B52-720DFCAF7771}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9BE83363-13D1-4835-9B52-720DFCAF7771}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9BE83363-13D1-4835-9B52-720DFCAF7771}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9BE83363-13D1-4835-9B52-720DFCAF7771}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
