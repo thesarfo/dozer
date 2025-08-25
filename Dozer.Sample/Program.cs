@@ -1,5 +1,6 @@
 ﻿using Dozer.Core.Attributes;
 using Dozer.Core.Data;
+using Dozer.Sample.Models;
 using Microsoft.Data.Sqlite;
 
 var connectionFactory = new DbConnectionFactory(
@@ -7,22 +8,18 @@ var connectionFactory = new DbConnectionFactory(
     SqliteFactory.Instance
 );
 
-// Create the table
-using (var conn = connectionFactory.CreateConnection())
-{
-    conn.Open();
-    using var cmd = connectionFactory.CreateCommand();
-    cmd.Connection = conn;
-    cmd.CommandText = @"
-        CREATE TABLE IF NOT EXISTS Users (
-            Id INTEGER PRIMARY KEY AUTOINCREMENT,
-            UserName TEXT NOT NULL,
-            Email TEXT
-        )";
-    cmd.ExecuteNonQuery();
-}
-
 using var db = new TinyDbContext(connectionFactory);
+
+// using schema generation
+Console.WriteLine("--- Schema Generation Demo ---");
+db.EnsureTableExists<User>();
+Console.WriteLine("Users table created/verified");
+
+db.EnsureTableExists<Product>();
+Console.WriteLine("Products table created/verified");
+
+Console.WriteLine($"Users table exists: {db.TableExists<User>()}");
+Console.WriteLine($"Products table exists: {db.TableExists<Product>()}");
 
 var user = new User { Username = "john", Email = "john@example.com" };
 
@@ -73,6 +70,61 @@ db.Delete(user2);
 db.Delete(user3);
 Console.WriteLine("All test users deleted successfully");
 
+// Test Product entity and transactions
+Console.WriteLine("\n--- Product Entity & Transaction Demo ---");
+
+var product1 = new Product 
+{ 
+    Name = "Laptop", 
+    Description = "High-performance laptop", 
+    Price = 999.99m, 
+    IsActive = true, 
+    CreatedDate = DateTime.Now,
+    CategoryId = 1
+};
+
+var product2 = new Product 
+{ 
+    Name = "Mouse", 
+    Description = "Wireless mouse", 
+    Price = 29.99m, 
+    IsActive = true, 
+    CreatedDate = DateTime.Now,
+    CategoryId = 2
+};
+
+// Demonstrate transaction support
+var transaction = db.BeginTransaction();
+try
+{
+    db.Insert(product1);
+    db.Insert(product2);
+    
+    // Query products
+    var allProducts = db.List<Product>();
+    Console.WriteLine($"Total products: {allProducts.Count}");
+    
+    var expensiveProducts = db.ExecuteQuery(db.Query<Product>().WhereGreaterThan("Price", 500));
+    Console.WriteLine($"Expensive products (>$500): {expensiveProducts.Count}");
+    
+    db.CommitTransaction(transaction);
+    Console.WriteLine("Transaction committed successfully");
+}
+catch (Exception ex)
+{
+    db.RollbackTransaction(transaction);
+    Console.WriteLine($"Transaction rolled back: {ex.Message}");
+}
+
+// Clean up
+db.Delete(product1);
+db.Delete(product2);
+Console.WriteLine("Products cleaned up");
+
+// Test async operations
+Console.WriteLine("\n--- Async Operations Demo ---");
+await User.TestAsyncOperations(connectionFactory);
+
 [Table("Users")]
 public class User
 {
@@ -83,4 +135,37 @@ public class User
     public string Username { get; set; }
 
     public string Email { get; set; }
+    
+    public static async Task TestAsyncOperations(DbConnectionFactory connectionFactory)
+{
+    using var asyncDb = new AsyncTinyDbContext(connectionFactory);
+    
+    // Ensure table exists
+    // Note: AsyncTinyDbContext doesn't have EnsureTableExists yet, so we'll use sync version
+    using var syncDb = new TinyDbContext(connectionFactory);
+    syncDb.EnsureTableExists<User>();
+    
+    var asyncUser = new User { Username = "async_user", Email = "async@example.com" };
+    
+    // Async insert
+    await asyncDb.InsertAsync(asyncUser);
+    Console.WriteLine($"Async inserted user with ID: {asyncUser.Id}");
+    
+    // Async find by ID
+    var foundAsyncUser = await asyncDb.FindByIdAsync<User>(asyncUser.Id);
+    Console.WriteLine($"Async found user: {foundAsyncUser?.Username}");
+    
+    // Async list
+    var allAsyncUsers = await asyncDb.ListAsync<User>();
+    Console.WriteLine($"Async total users: {allAsyncUsers.Count}");
+    
+    // Async query
+    var asyncQuery = asyncDb.Query<User>().WhereEquals("UserName", "async_user");
+    var asyncResults = await asyncDb.ExecuteQueryAsync(asyncQuery);
+    Console.WriteLine($"Async query results: {asyncResults.Count}");
+    
+    // Clean up
+    await asyncDb.DeleteAsync(asyncUser);
+    Console.WriteLine("Async user cleaned up");
+}
 }
