@@ -1,5 +1,6 @@
 using System;
 
+
 namespace Dozer.Core.Attributes;
 
 [AttributeUsage(AttributeTargets.Property)]
