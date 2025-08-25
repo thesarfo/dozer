@@ -11,10 +11,12 @@ public class TinyDbContext : IDisposable
 {
     private readonly DbConnectionFactory _connectionFactory;
     private IDbConnection _connection;
+    private readonly Dictionary<Type, object> _entityTrackers;
 
     public TinyDbContext(DbConnectionFactory connectionFactory)
     {
         _connectionFactory = connectionFactory;
+        _entityTrackers = new Dictionary<Type, object>();
     }
 
     private IDbConnection Connection
@@ -52,25 +54,50 @@ public class TinyDbContext : IDisposable
                 mapper.KeyProperty.SetValue(entity, Convert.ChangeType(generatedId, mapper.KeyProperty.PropertyType));
             }
         }
+
+        // after a successful insert, we track the entity
+        GetEntityTracker<T>().TrackEntity(entity);
     }
 
     public void Update<T>(T entity) where T : class
     {
         var mapper = new EntityMapper<T>();
         var sqlGenerator = new SqlGenerator<T>(mapper);
+        var tracker = GetEntityTracker<T>();
 
-        using var cmd = _connectionFactory.CreateCommand();
-        cmd.Connection = Connection;
-        cmd.CommandText = sqlGenerator.GenerateUpdateSql();
+        // we check if entity is tracked and has changes
+        if (tracker.IsModified(entity))
+        {
+            var modifiedProperties = tracker.GetModifiedProperties(entity);
+            if (modifiedProperties.Any())
+            {
+                // then we only update modified properties
+                using var cmd = _connectionFactory.CreateCommand();
+                cmd.Connection = Connection;
+                cmd.CommandText = sqlGenerator.GenerateUpdateSql(modifiedProperties);
 
-        AddParameters(cmd, entity, mapper);
-        cmd.ExecuteNonQuery();
+                AddModifiedParameters(cmd, entity, mapper, modifiedProperties);
+                cmd.ExecuteNonQuery();
+            }
+        }
+        else
+        {
+            using var cmd = _connectionFactory.CreateCommand();
+            cmd.Connection = Connection;
+            cmd.CommandText = sqlGenerator.GenerateUpdateSql();
+
+            AddParameters(cmd, entity, mapper);
+            cmd.ExecuteNonQuery();
+        }
+
+        tracker.AcceptChanges(entity);
     }
 
     public void Delete<T>(T entity) where T : class
     {
         var mapper = new EntityMapper<T>();
         var sqlGenerator = new SqlGenerator<T>(mapper);
+        var tracker = GetEntityTracker<T>();
 
         using var cmd = _connectionFactory.CreateCommand();
         cmd.Connection = Connection;
@@ -83,25 +110,38 @@ public class TinyDbContext : IDisposable
         cmd.Parameters.Add(param);
 
         cmd.ExecuteNonQuery();
+
+        // mark it as deleted in tracker
+        tracker.MarkAsDeleted(entity);
     }
 
     public List<T> List<T>() where T : class
     {
         var mapper = new EntityMapper<T>();
         var sqlGenerator = new SqlGenerator<T>(mapper);
+        var tracker = GetEntityTracker<T>();
 
         using var cmd = _connectionFactory.CreateCommand();
         cmd.Connection = Connection;
         cmd.CommandText = sqlGenerator.GenerateSelectAllSql();
 
         using var reader = cmd.ExecuteReader();
-        return MapResults<T>(reader, mapper).ToList();
+        var results = MapResults<T>(reader, mapper).ToList();
+        
+        // track loaded entities
+        foreach (var entity in results)
+        {
+            tracker.TrackEntity(entity);
+        }
+        
+        return results;
     }
 
     public T FindById<T>(object id) where T : class
     {
         var mapper = new EntityMapper<T>();
         var sqlGenerator = new SqlGenerator<T>(mapper);
+        var tracker = GetEntityTracker<T>();
 
         using var cmd = _connectionFactory.CreateCommand();
         cmd.Connection = Connection;
@@ -114,7 +154,14 @@ public class TinyDbContext : IDisposable
         cmd.Parameters.Add(param);
 
         using var reader = cmd.ExecuteReader();
-        return MapResults<T>(reader, mapper).FirstOrDefault();
+        var result = MapResults<T>(reader, mapper).FirstOrDefault();
+        
+        if (result != null)
+        {
+            tracker.TrackEntity(result);
+        }
+        
+        return result;
     }
 
     public QueryBuilder<T> Query<T>() where T : class
@@ -266,6 +313,60 @@ public class TinyDbContext : IDisposable
     {
         transaction?.Rollback();
         transaction?.Dispose();
+    }
+
+    private EntityTracker<T> GetEntityTracker<T>() where T : class
+    {
+        var type = typeof(T);
+        if (!_entityTrackers.TryGetValue(type, out var tracker))
+        {
+            tracker = new EntityTracker<T>();
+            _entityTrackers[type] = tracker;
+        }
+        return (EntityTracker<T>)tracker;
+    }
+
+    private void AddModifiedParameters<T>(IDbCommand cmd, T entity, EntityMapper<T> mapper, Dictionary<PropertyInfo, object> modifiedProperties) where T : class
+    {
+        // add modified property parameters
+        foreach (var kvp in modifiedProperties)
+        {
+            var property = kvp.Key;
+            var value = kvp.Value;
+            var columnName = mapper.ColumnMappings[property];
+            
+            var param = _connectionFactory.CreateParameter();
+            param.ParameterName = $"@{columnName}";
+            param.Value = value ?? DBNull.Value;
+            cmd.Parameters.Add(param);
+        }
+
+        // for WHERE clauses, we need to add the key parameter
+        var keyColumn = mapper.ColumnMappings[mapper.KeyProperty];
+        var keyParam = _connectionFactory.CreateParameter();
+        keyParam.ParameterName = $"@{keyColumn}";
+        keyParam.Value = mapper.KeyProperty.GetValue(entity) ?? DBNull.Value;
+        cmd.Parameters.Add(keyParam);
+    }
+
+    public void TrackEntity<T>(T entity) where T : class
+    {
+        GetEntityTracker<T>().TrackEntity(entity);
+    }
+
+    public void MarkAsModified<T>(T entity) where T : class
+    {
+        GetEntityTracker<T>().MarkAsModified(entity);
+    }
+
+    public EntityState GetEntityState<T>(T entity) where T : class
+    {
+        return GetEntityTracker<T>().GetEntityState(entity);
+    }
+
+    public void AcceptChanges<T>(T entity) where T : class
+    {
+        GetEntityTracker<T>().AcceptChanges(entity);
     }
 
     public void Dispose()

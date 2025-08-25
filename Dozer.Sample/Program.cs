@@ -120,9 +120,51 @@ db.Delete(product1);
 db.Delete(product2);
 Console.WriteLine("Products cleaned up");
 
+// Test change tracking
+Console.WriteLine("\n--- Change Tracking Demo ---");
+TestChangeTracking(db);
+
 // async operations
 Console.WriteLine("\n--- Async Operations Demo ---");
 await User.TestAsyncOperations(connectionFactory);
+
+static void TestChangeTracking(TinyDbContext db)
+{
+    // Create and insert a user
+    var user = new User { Username = "tracking_user", Email = "tracking@example.com" };
+    db.Insert(user);
+    Console.WriteLine($"Inserted user with ID: {user.Id}");
+    
+    // Check initial state
+    Console.WriteLine($"Initial entity state: {db.GetEntityState(user)}");
+    
+    // Modify the user
+    user.Email = "modified@example.com";
+    Console.WriteLine($"After modification, entity state: {db.GetEntityState(user)}");
+    
+    // Mark as modified (this would typically be done automatically in a real scenario)
+    db.MarkAsModified(user);
+    
+    // Update - this should only update the Email field
+    db.Update(user);
+    Console.WriteLine($"After update, entity state: {db.GetEntityState(user)}");
+    
+    // Modify again
+    user.Username = "updated_username";
+    db.MarkAsModified(user);
+    
+    // Update again - should only update Username this time
+    db.Update(user);
+    Console.WriteLine($"After second update, entity state: {db.GetEntityState(user)}");
+    
+    // Accept changes
+    db.AcceptChanges(user);
+    Console.WriteLine($"After accepting changes, entity state: {db.GetEntityState(user)}");
+    
+    // Clean up
+    db.Delete(user);
+    Console.WriteLine("Change tracking user cleaned up");
+}
 
 [Table("Users")]
 public class User
