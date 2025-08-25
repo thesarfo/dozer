@@ -93,7 +93,7 @@ var product2 = new Product
     CategoryId = 2
 };
 
-// Demonstrate transaction support
+// transaction support
 var transaction = db.BeginTransaction();
 try
 {
@@ -116,12 +116,11 @@ catch (Exception ex)
     Console.WriteLine($"Transaction rolled back: {ex.Message}");
 }
 
-// Clean up
 db.Delete(product1);
 db.Delete(product2);
 Console.WriteLine("Products cleaned up");
 
-// Test async operations
+// async operations
 Console.WriteLine("\n--- Async Operations Demo ---");
 await User.TestAsyncOperations(connectionFactory);
 
@@ -141,7 +140,7 @@ public class User
     using var asyncDb = new AsyncTinyDbContext(connectionFactory);
     
     // Ensure table exists
-    // Note: AsyncTinyDbContext doesn't have EnsureTableExists yet, so we'll use sync version
+    // NB: AsyncTinyDbContext doesn't have EnsureTableExists yet, so we use sync version -> i'll add it later
     using var syncDb = new TinyDbContext(connectionFactory);
     syncDb.EnsureTableExists<User>();
     
@@ -164,7 +163,6 @@ public class User
     var asyncResults = await asyncDb.ExecuteQueryAsync(asyncQuery);
     Console.WriteLine($"Async query results: {asyncResults.Count}");
     
-    // Clean up
     await asyncDb.DeleteAsync(asyncUser);
     Console.WriteLine("Async user cleaned up");
 }
