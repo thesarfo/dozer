@@ -172,6 +172,41 @@ public class TinyDbContext : IDisposable
         return Convert.ToInt32(result);
     }
 
+    public void EnsureTableExists<T>() where T : class
+    {
+        var mapper = new EntityMapper<T>();
+        var schemaGenerator = new SchemaGenerator<T>(mapper);
+        
+        using var cmd = _connectionFactory.CreateCommand();
+        cmd.Connection = Connection;
+        cmd.CommandText = schemaGenerator.GenerateCreateTableSql();
+        cmd.ExecuteNonQuery();
+    }
+
+    public bool TableExists<T>() where T : class
+    {
+        var mapper = new EntityMapper<T>();
+        var schemaGenerator = new SchemaGenerator<T>(mapper);
+        
+        using var cmd = _connectionFactory.CreateCommand();
+        cmd.Connection = Connection;
+        cmd.CommandText = schemaGenerator.GenerateTableExistsSql();
+        
+        var result = cmd.ExecuteScalar();
+        return result != null;
+    }
+
+    public void DropTable<T>() where T : class
+    {
+        var mapper = new EntityMapper<T>();
+        var schemaGenerator = new SchemaGenerator<T>(mapper);
+        
+        using var cmd = _connectionFactory.CreateCommand();
+        cmd.Connection = Connection;
+        cmd.CommandText = schemaGenerator.GenerateDropTableSql();
+        cmd.ExecuteNonQuery();
+    }
+
     private void AddParameters<T>(IDbCommand cmd, T entity, EntityMapper<T> mapper) where T : class
     {
         foreach (var mapping in mapper.ColumnMappings)
@@ -214,6 +249,23 @@ public class TinyDbContext : IDisposable
 
             yield return instance;
         }
+    }
+
+    public IDbTransaction BeginTransaction()
+    {
+        return Connection.BeginTransaction();
+    }
+
+    public void CommitTransaction(IDbTransaction transaction)
+    {
+        transaction?.Commit();
+        transaction?.Dispose();
+    }
+
+    public void RollbackTransaction(IDbTransaction transaction)
+    {
+        transaction?.Rollback();
+        transaction?.Dispose();
     }
 
     public void Dispose()
