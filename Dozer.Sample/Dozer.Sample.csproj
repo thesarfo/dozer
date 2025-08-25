@@ -7,4 +7,12 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\Dozer.Core\Dozer.Core.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.0-preview.4.25258.110" />
+    </ItemGroup>
+
 </Project>

@@ -1,7 +1,8 @@
-using System;
+
+
 using Dozer.Core.Attributes;
 
-namespace Dozer.Core.Tests.TestModels;
+namespace Dozer.Tests.TestModels;
 
 [Table("Users")]
 public class User
