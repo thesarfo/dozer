@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using Dozer.Core.Mapping;
 
@@ -36,6 +38,24 @@ public class SqlGenerator<T> where T : class
         var setColumns = _mapper.ColumnMappings
             .Where(x => x.Key != _mapper.KeyProperty)
             .Select(x => $"{x.Value} = @{x.Value}");
+
+        var keyColumn = _mapper.ColumnMappings[_mapper.KeyProperty];
+        
+        return $"UPDATE {_mapper.TableName} " +
+               $"SET {string.Join(", ", setColumns)} " +
+               $"WHERE {keyColumn} = @{keyColumn}";
+    }
+
+    public string GenerateUpdateSql(Dictionary<PropertyInfo, object> modifiedProperties)
+    {
+        if (_mapper.KeyProperty == null)
+            throw new InvalidOperationException("Entity must have a key property for update operations");
+
+        if (!modifiedProperties.Any())
+            throw new InvalidOperationException("No properties to update");
+
+        var setColumns = modifiedProperties
+            .Select(x => $"{_mapper.ColumnMappings[x.Key]} = @{_mapper.ColumnMappings[x.Key]}");
 
         var keyColumn = _mapper.ColumnMappings[_mapper.KeyProperty];
         
