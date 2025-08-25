@@ -1,10 +1,7 @@
-using System;
-using System.Linq;
 using Dozer.Core.Mapping;
-using Dozer.Core.Tests.TestModels;
-using Xunit;
+using Dozer.Tests.TestModels;
 
-namespace Dozer.Core.Tests.Mapping;
+namespace Dozer.Tests.Mapping;
 
 public class EntityMapperTests
 {

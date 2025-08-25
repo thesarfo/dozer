@@ -41,6 +41,17 @@ public class TinyDbContext : IDisposable
 
         AddParameters(cmd, entity, mapper);
         cmd.ExecuteNonQuery();
+        
+        // If its an autoincrement pk, we get the generated ID and set it back to the entity
+        if (mapper.IsAutoIncrement && mapper.KeyProperty != null)
+        {
+            cmd.CommandText = "SELECT last_insert_rowid()";
+            var generatedId = cmd.ExecuteScalar();
+            if (generatedId != null)
+            {
+                mapper.KeyProperty.SetValue(entity, Convert.ChangeType(generatedId, mapper.KeyProperty.PropertyType));
+            }
+        }
     }
 
     public void Update<T>(T entity) where T : class
@@ -85,6 +96,80 @@ public class TinyDbContext : IDisposable
 
         using var reader = cmd.ExecuteReader();
         return MapResults<T>(reader, mapper).ToList();
+    }
+
+    public T FindById<T>(object id) where T : class
+    {
+        var mapper = new EntityMapper<T>();
+        var sqlGenerator = new SqlGenerator<T>(mapper);
+
+        using var cmd = _connectionFactory.CreateCommand();
+        cmd.Connection = Connection;
+        cmd.CommandText = sqlGenerator.GenerateSelectByIdSql();
+
+        var keyColumn = mapper.ColumnMappings[mapper.KeyProperty];
+        var param = _connectionFactory.CreateParameter();
+        param.ParameterName = $"@{keyColumn}";
+        param.Value = id ?? DBNull.Value;
+        cmd.Parameters.Add(param);
+
+        using var reader = cmd.ExecuteReader();
+        return MapResults<T>(reader, mapper).FirstOrDefault();
+    }
+
+    public QueryBuilder<T> Query<T>() where T : class
+    {
+        var mapper = new EntityMapper<T>();
+        return new QueryBuilder<T>(mapper);
+    }
+
+    public List<T> ExecuteQuery<T>(QueryBuilder<T> queryBuilder) where T : class
+    {
+        var mapper = new EntityMapper<T>();
+        
+        using var cmd = _connectionFactory.CreateCommand();
+        cmd.Connection = Connection;
+        cmd.CommandText = queryBuilder.BuildSql();
+
+        // Add parameters
+        foreach (var param in queryBuilder.GetParameters())
+        {
+            var dbParam = _connectionFactory.CreateParameter();
+            dbParam.ParameterName = param.Name;
+            dbParam.Value = param.Value ?? DBNull.Value;
+            cmd.Parameters.Add(dbParam);
+        }
+
+        using var reader = cmd.ExecuteReader();
+        return MapResults<T>(reader, mapper).ToList();
+    }
+
+    public T FirstOrDefault<T>(QueryBuilder<T> queryBuilder) where T : class
+    {
+        var results = ExecuteQuery(queryBuilder.Limit(1));
+        return results.FirstOrDefault();
+    }
+
+    public int Count<T>(QueryBuilder<T> queryBuilder) where T : class
+    {
+        var originalSql = queryBuilder.BuildSql();
+        var countSql = originalSql.Replace("SELECT " + string.Join(", ", new EntityMapper<T>().ColumnMappings.Values), "SELECT COUNT(*)");
+        
+        using var cmd = _connectionFactory.CreateCommand();
+        cmd.Connection = Connection;
+        cmd.CommandText = countSql;
+
+        // Add parameters
+        foreach (var param in queryBuilder.GetParameters())
+        {
+            var dbParam = _connectionFactory.CreateParameter();
+            dbParam.ParameterName = param.Name;
+            dbParam.Value = param.Value ?? DBNull.Value;
+            cmd.Parameters.Add(dbParam);
+        }
+
+        var result = cmd.ExecuteScalar();
+        return Convert.ToInt32(result);
     }
 
     private void AddParameters<T>(IDbCommand cmd, T entity, EntityMapper<T> mapper) where T : class
