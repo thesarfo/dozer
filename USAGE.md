@@ -10,6 +10,7 @@ This guide provides detailed examples of how to use the Dozer ORM library.
 4. [Transactions](#transactions)
 5. [Async Operations](#async-operations)
 6. [Schema Generation](#schema-generation)
+7. [Change Tracking](#change-tracking)
 
 ## Entity Definition
 
@@ -248,4 +249,59 @@ UPDATE Users SET UserName = @UserName, Email = @Email WHERE Id = @Id
 DELETE FROM Users WHERE Id = @Id
 ```
 
+## Change Tracking
+
+This ORM has a change tracking system that only updates modified properties, making it more efficient and avoiding redundant database writes.
+
+### Basic Change Tracking
+
+```csharp
+// Insert a user (automatically tracked)
+var user = new User { Username = "john", Email = "john@example.com" };
+db.Insert(user);
+
+// Check entity state
+Console.WriteLine($"Entity state: {db.GetEntityState(user)}"); // Added
+
+// Modify the user
+user.Email = "new@example.com";
+
+// Mark as modified
+db.MarkAsModified(user);
+
+// Update - only the Email field will be updated in the database
+db.Update(user);
+
+// Accept changes to reset the state
+db.AcceptChanges(user);
+```
+
+### Entity States
+
+- **Added**: Entity was just inserted
+- **Modified**: Entity has been modified since last save
+- **Deleted**: Entity is marked for deletion
+- **Unchanged**: Entity is in sync with database
+
+### Automatic Tracking
+
+Entities are automatically tracked when:
+- Inserted via `db.Insert()`
+- Loaded via `db.List()` or `db.FindById()`
+
+### Manual Tracking
+You can also track your entity manually
+```csharp
+// Manually track an entity
+db.TrackEntity(user);
+
+// Mark as modified
+db.MarkAsModified(user);
+
+// Check if modified
+if (db.GetEntityState(user) == EntityState.Modified)
+{
+    db.Update(user);
+}
+```
 For more examples, see the `Dozer.Sample` project in the repository.
