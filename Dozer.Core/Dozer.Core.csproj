@@ -4,6 +4,24 @@
         <TargetFramework>net8.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        
+        <!-- NuGet Package Metadata -->
+        <PackageId>Dozer.Core</PackageId>
+        <Version>1.0.0</Version>
+        <Authors>Ernest Sarfo</Authors>
+        <Description>A lightweight, reflection-based Object-Relational Mapping (ORM) library for .NET with features including CRUD operations, fluent query API, change tracking, identity map, transactions, and async support.</Description>
+        <PackageTags>orm;micro-orm;database;sql;sqlite;entity-framework;reflection;crud;async;change-tracking</PackageTags>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageProjectUrl>https://github.com/yourusername/Dozer</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/yourusername/Dozer</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     </PropertyGroup>
+
+
 
 </Project>
